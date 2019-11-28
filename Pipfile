@@ -10,7 +10,7 @@ autopep8 = "*"
 pandas = "*"
 seaborn = "*"
 matplotlib = "*"
-tkinter = "*"
+graphviz = "*"
 
 [requires]
 python_version = "3.6"

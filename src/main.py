@@ -23,6 +23,7 @@ dtree = dt.DecisionTreeFactory.create(samples,
                                       [attribute_outlook, attribute_temperature, attribute_humidity, attribute_wind],
                                       attribute_played, attribute_selector)
 
+dtree.draw('kjkj')
 
 def printtree(prefix, node):
     if isinstance(node, DTreeDecisionNode):
