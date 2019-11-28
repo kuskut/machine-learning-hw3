@@ -1,6 +1,9 @@
 from os import path
+
 import pandas as pd
+
 import decisiontree as dt
+from decisiontree.decisiontree import DTreeDecisionNode
 
 file_location = path.join(path.abspath(
     path.dirname(__file__)), '../data', 'test.data')
@@ -22,7 +25,7 @@ dtree = dt.DecisionTreeFactory.create(samples,
 
 
 def printtree(prefix, node):
-    if isinstance(node, dt.DTreeDecisionNode):
+    if isinstance(node, DTreeDecisionNode):
         print(prefix + node.attribute.name)
         for link in node.links:
             printtree(prefix + '<' + link.attribute_class + '>' + '-', link.node)

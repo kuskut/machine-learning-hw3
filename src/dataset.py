@@ -1,6 +1,7 @@
+import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import seaborn as sns
-import matplotlib.pyplot as plt
 
 
 class Dataset:
@@ -23,4 +24,15 @@ class Dataset:
         plt.show()
 
     def _generate_training_and_test(self):
-        pass
+        mask = np.random.rand(len(self.main_dataset)) < 0.8
+        self.training_dataset = self.main_dataset[mask]
+        self.test_dataset = self.main_dataset[~mask]
+
+    def get_main_dataset(self):
+        return self.main_dataset
+
+    def get_training_dataset(self):
+        return self.training_dataset
+
+    def get_test_dataset(self):
+        return self.test_dataset
