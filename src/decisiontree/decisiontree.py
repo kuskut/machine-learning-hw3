@@ -1,7 +1,8 @@
-from abc import ABC, abstractmethod
-import graphviz
-from os import path
 import random
+from abc import ABC, abstractmethod
+from os import path
+
+import graphviz
 
 
 class DTreeNode(ABC):
@@ -36,9 +37,9 @@ class DTreeDecisionNode(DTreeNode):
 
         for link in self.links:
             if link.attribute_class == sample_attribute_class:
-                return link.node.evaluate(sample)
+                return link.node.classify(sample)
 
-        raise ValueError('the sample {0} does not belong to any class of {1]'.format(str(sample), self.attribute.name))
+        raise ValueError('the sample {0} does not belong to any class of {1}'.format(str(sample), self.attribute.name))
 
     def deactivate(self):
         self.is_active = False
@@ -71,13 +72,16 @@ class DecisionTree:
         :param sample:
         :return: predicted target attribute value
         """
-        return self.root_node.evaluate(sample)
+        return self.root_node.classify(sample)
 
     def evaluate(self, test_samples):
         errors_count = 0
-        for sample in test_samples:
-            predicted_value = self.classify(sample)
-            if predicted_value != self.target_attribute.get_class(sample):
+        for _, sample in test_samples.iterrows():
+            try:
+                predicted_value = self.classify(sample)
+                if predicted_value != self.target_attribute.get_class(sample):
+                    errors_count += 1
+            except ValueError:
                 errors_count += 1
 
         return errors_count / len(test_samples)
@@ -85,14 +89,18 @@ class DecisionTree:
     def _draw_node(self, graph, node):
         nname = str(random.randrange(1, 1000000))
         if isinstance(node, DTreeDecisionNode):
-            graph.attr('node', shape='box')
-            graph.node(nname, label=node.attribute.name)
-            for link in node.links:
-                child_lbl = self._draw_node(graph, link.node)
-                graph.edge(nname, child_lbl, link.attribute_class)
+            if node.is_active:
+                graph.attr('node', shape='box')
+                graph.node(name=nname, label=node.attribute.name)
+                for link in node.links:
+                    child_lbl = self._draw_node(graph, link.node)
+                    graph.edge(nname, child_lbl, str(link.attribute_class))
+            else:
+                graph.attr('node', shape='diamond')
+                graph.node(name=nname, label=str(node.predominant_target_value))
         else:
             graph.attr('node', shape='ellipse')
-            graph.node(name=nname, label=node.target_value)
+            graph.node(name=nname, label=str(node.target_value))
 
         return nname
 
@@ -104,12 +112,43 @@ class DecisionTree:
 
         graph.view()
 
+    def _get_all_nodes(self, n, parent_node, include_decision=True, include_terminal=False,
+                       include_inactive=False):
+        nodes = []
+        if isinstance(parent_node, DTreeDecisionNode):
+            if not parent_node.is_active and not include_inactive:
+                return nodes
+
+            if include_decision:
+                nodes.append((n, parent_node))
+
+            for link in parent_node.links:
+                nodes.extend(self._get_all_nodes(n + 1, link.node, include_decision, include_terminal,
+                                                 include_inactive))
+
+        elif include_terminal:
+            nodes.append((n, parent_node))
+
+        return nodes
+
+    def prune(self, validation_samples):
+        all_nodes = self._get_all_nodes(0, self.root_node, True, False, False)
+        all_nodes = sorted(all_nodes, key=lambda x: x[0], reverse=True)
+        error_rate = self.evaluate(validation_samples)
+
+        for _, node in all_nodes:
+            node.deactivate()
+            pruned_error_rate = self.evaluate(validation_samples)
+
+            if pruned_error_rate > error_rate:
+                node.activate()
+
 
 class DecisionTreeFactory:
     @staticmethod
     def _create_node(samples, attributes, target_attribute, attribute_selector):
         if len(samples) == 0:
-            return DTreeTerminalNode('XX UNKNOWN XX')
+            return DTreeTerminalNode('X')
 
         tattr = samples.loc[:, target_attribute.name].mode().iloc[0]
 
